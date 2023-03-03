@@ -1,0 +1,77 @@
+version: "3"
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: proot-nginx
+    restart: always
+    ports:
+      - "8140:80"
+    depends_on:
+      - app
+      - db
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./:/var/www
+      - ./nginx/logs:/var/log/nginx/
+    networks:
+      - privacyroot
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    user: 1000:1000
+    container_name: proot-php
+    working_dir: /var/www
+    restart: always
+    ports:
+      - 9000:9000
+    volumes:
+      - ./:/var/www
+      - ./sogs.db:/pysogs/sogs.db
+      - ./sogs.ini:/pysogs/sogs.ini      
+    networks:
+      - privacyroot
+
+  cron:
+    build:
+      context: .
+      dockerfile: cron.Dockerfile
+    container_name: proot-cron
+    restart: always
+    volumes:
+      - ./:/var/www
+    networks:
+      - privacyroot
+
+  db:
+    image: mariadb
+    container_name: proot-mariadb
+    restart: always
+    environment:
+        MARIADB_ROOT_HOST: '%'
+        MARIADB_DATABASE: prootdb
+        MARIADB_ROOT_PASSWORD: 1234
+        SERVICE_NAME: db
+    volumes:
+      - ./mysql:/var/lib/mysql
+    ports:
+      - "5306:3306"
+    networks:
+      - privacyroot
+
+  oxenrpc:
+    build:
+      context: .
+      dockerfile: oxenrpc.Dockerfile
+    container_name: proot-oxenrpc
+    restart: always
+    working_dir: /home
+    volumes:
+      - ./oxenrpc:/home
+    networks:
+      - privacyroot
+
+networks:
+  privacyroot:
+    driver: bridge
